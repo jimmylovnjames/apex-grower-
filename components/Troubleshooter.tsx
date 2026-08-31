@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { UserSetup, GrowStage, DiagnosisResult, LocalClimate, StrainProfile, GrowSchedule } from '../types';
 import { diagnosePlantIssue } from '../services/gemini';
-import { BugIcon, LeafIcon, ActivityIcon, AlertTriangleIcon, LoaderIcon, CheckCircleIcon, XIcon, MapPinIcon } from './Icons';
+import { BugIcon, LeafIcon, ActivityIcon, AlertTriangleIcon, LoaderIcon, CheckCircleIcon, XIcon, MapPinIcon, DropletIcon, ThermometerIcon } from './Icons';
 
 interface TroubleshooterProps {
   setup: UserSetup;
@@ -12,6 +12,18 @@ interface TroubleshooterProps {
   onClose: () => void;
 }
 
+/**
+ * Pre-plant problems are about the medium and the hardware, not the plant, so
+ * the prep stage gets its own set. Offering "Yellowing Leaves" to someone who
+ * has not planted yet is useless.
+ */
+const PREP_CATEGORIES = [
+  { id: 'medium', label: 'Medium / Mix', icon: DropletIcon, symptoms: ['Smells sour or like ammonia', 'Mix stays soggy / will not drain', 'Mould or fungus on the surface', 'Dries out far too fast', 'Fungus gnats already in it'] },
+  { id: 'chemistry', label: 'pH / EC', icon: ActivityIcon, symptoms: ['pH will not hold steady', 'Runoff EC far too high', 'Runoff EC near zero', 'pH climbs in the reservoir', 'pH crashes in the reservoir'] },
+  { id: 'system', label: 'System / Equipment', icon: AlertTriangleIcon, symptoms: ['Reservoir or fittings leaking', 'Pump or air stone seems weak', 'Nozzles clogged or misting unevenly', 'Water temperature too high', 'Timer not cycling correctly'] },
+  { id: 'site', label: 'Site / Environment', icon: ThermometerIcon, symptoms: ['Root zone too cold', 'Bed will not drain', 'Native soil pH is wrong', 'Space too cold to start', 'Space too humid to start'] }
+];
+
 const CATEGORIES = [
   { id: 'leaves', label: 'Leaves / Foliage', icon: LeafIcon, symptoms: ['Yellowing Leaves', 'Brown Spots/Patches', 'Curling Up (Taco)', 'Curling Down (Claw)', 'White Powdery Spots', 'Holes/Bite Marks'] },
   { id: 'pests', label: 'Pests / Bugs', icon: BugIcon, symptoms: ['Webbing on plants', 'Flying insects', 'Tiny bugs under leaves', 'White things in soil', 'Slime trails'] },
@@ -20,6 +32,7 @@ const CATEGORIES = [
 ];
 
 const Troubleshooter: React.FC<TroubleshooterProps> = ({ setup, stage, climate, strain, schedule, onClose }) => {
+  const categories = stage === GrowStage.SOIL_PREP ? PREP_CATEGORIES : CATEGORIES;
   const [step, setStep] = useState<'category' | 'symptom' | 'analyzing' | 'result'>('category');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSymptom, setSelectedSymptom] = useState<string | null>(null);
@@ -51,9 +64,11 @@ const Troubleshooter: React.FC<TroubleshooterProps> = ({ setup, stage, climate, 
       case 'category':
         return (
           <div className="space-y-4">
-            <h3 className="text-xl font-bold text-white mb-6">What kind of issue are you seeing?</h3>
+            <h3 className="text-xl font-bold text-white mb-6">
+              {stage === GrowStage.SOIL_PREP ? 'What is wrong with your setup?' : 'What kind of issue are you seeing?'}
+            </h3>
             <div className="grid grid-cols-2 gap-4">
-              {CATEGORIES.map((cat) => (
+              {categories.map((cat) => (
                 <button
                   key={cat.id}
                   onClick={() => handleCategorySelect(cat.id)}
@@ -68,7 +83,7 @@ const Troubleshooter: React.FC<TroubleshooterProps> = ({ setup, stage, climate, 
         );
 
       case 'symptom':
-        const category = CATEGORIES.find(c => c.id === selectedCategory);
+        const category = categories.find(c => c.id === selectedCategory);
         return (
           <div className="space-y-4">
             <button onClick={() => setStep('category')} className="text-sm text-zinc-500 hover:text-zinc-300 mb-2">← Back to categories</button>

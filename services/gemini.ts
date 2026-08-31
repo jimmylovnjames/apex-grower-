@@ -30,6 +30,23 @@ export interface GrowContext {
   schedule: GrowSchedule | null;
 }
 
+/**
+ * What each stage is actually about. Prep especially needs spelling out — the
+ * model will happily give plant-care advice for a stage with no plants in it.
+ */
+const STAGE_BRIEFS: Record<GrowStage, string> = {
+  [GrowStage.SOIL_PREP]:
+    'Nothing is planted yet. Every recommendation must be about getting the medium, containers, water and space ready: amending and buffering, pH and EC of the medium or reservoir before anything goes in, container size and drainage, sterilising equipment, and bringing root-zone temperature to 18–24°C. Do not give plant-care, feeding-schedule or training advice — there is no plant.',
+  [GrowStage.SEEDLING]:
+    'Fragile roots, tiny water demand. Focus on humidity, gentle light, and not overwatering.',
+  [GrowStage.VEGETATIVE]:
+    'Building structure and root mass. Focus on training, nitrogen availability and canopy shape.',
+  [GrowStage.FLOWERING]:
+    'Bud development. Focus on stretch control, phosphorus and potassium, airflow and mould prevention.',
+  [GrowStage.CURING]:
+    'Harvested material. Focus on drying rate, humidity control, burping and storage — not on living plants.'
+};
+
 const formatList = (values: string[], limit = 4): string =>
   values.length ? values.slice(0, limit).join(', ') + (values.length > limit ? ` (+${values.length - limit} more)` : '') : 'none';
 
@@ -102,7 +119,9 @@ const calendarBlock = (setup: UserSetup, schedule: GrowSchedule | null): string 
 
   return (
     `GROW CALENDAR (today is ${today})\n` +
-    `- Day ${schedule.dayOfGrow} of this grow (germinated ${schedule.startDate})\n` +
+    (schedule.dayOfGrow >= 1
+      ? `- Day ${schedule.dayOfGrow} of this grow (germinated ${schedule.startDate})\n`
+      : `- Not germinated yet — planting is set for ${schedule.startDate}, ${1 - schedule.dayOfGrow} day(s) away. Prep started ${schedule.prepStartDate}.\n`) +
     `- Flip / flower start: ${schedule.flipDate} | Projected harvest: ${schedule.harvestDate} (${toHarvest >= 0 ? `${toHarvest} days out` : `${Math.abs(toHarvest)} days ago`})\n` +
     `- Jars ready: ${schedule.jarDate}\n` +
     `- Next 14 days on the calendar:\n` +
@@ -119,6 +138,7 @@ export const buildContext = (ctx: GrowContext): string => {
     `- Medium: ${setup.method} | Environment: ${setup.environment} | Seed type: ${setup.strainType}`,
     `- Experience: ${setup.experienceLevel}`,
     `- Current stage: ${stage} (VPD target ${VPD_TARGETS[stage].label})`,
+    `- What this stage is: ${STAGE_BRIEFS[stage]}`,
     ``,
     locationBlock(setup, ctx.climate),
     ``,
@@ -162,7 +182,10 @@ Generate 5 specific, high-impact tasks for the ${stage} stage of THIS grow.
 
 Requirements:
 - At least two tasks must be driven by the local forecast or daylight above (heat, cold, humidity, rain, UV, photoperiod).
-- At least one task must be specific to ${setup.strainName || 'this cultivar'} — its stretch, flowering length, feeding appetite or known weaknesses.
+${stage === GrowStage.SOIL_PREP
+  ? `- At least one task must size the setup to ${setup.strainName || 'this cultivar'} — container volume for its root mass and final height, and how rich to build the medium for its feeding appetite.
+- Every task must be pre-plant work on the ${setup.method} medium, the containers, the water or the space. Nothing about caring for a plant.`
+  : `- At least one task must be specific to ${setup.strainName || 'this cultivar'} — its stretch, flowering length, feeding appetite or known weaknesses.`}
 - Schedule each task with "dueInDays": a whole number of days from today (0 = today, max 21) reflecting when it actually needs doing.
 - "localRationale" must name the specific local condition or calendar date that makes this task matter now. Leave it empty only if the task is genuinely location-independent.
 - Be specific to ${setup.method} (pH and EC targets for that medium, not generic ranges).

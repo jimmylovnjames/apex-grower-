@@ -7,7 +7,7 @@ import GrowCalendar from './components/GrowCalendar';
 import Troubleshooter from './components/Troubleshooter';
 import { generateTasksForStage, chatWithGrower, getStrainProfile, getLocalBriefing } from './services/gemini';
 import { fetchLocalClimate } from './services/weather';
-import { buildSchedule, expectedStage } from './services/calendar';
+import { buildSchedule, expectedStage, growDayLabel, growDayPhrase } from './services/calendar';
 import { toISODate } from './services/solar';
 import {
   ActivityIcon, CalendarIcon, CheckCircleIcon, DnaIcon, LeafIcon, LoaderIcon,
@@ -30,6 +30,7 @@ const STORAGE = {
  * today, and defaulting them to day one makes every projected date wrong.
  */
 const STAGE_BACKDATE_DAYS: Record<GrowStage, number> = {
+  [GrowStage.SOIL_PREP]: 0,
   [GrowStage.SEEDLING]: 0,
   [GrowStage.VEGETATIVE]: 14,
   [GrowStage.FLOWERING]: 42,
@@ -258,10 +259,14 @@ function App() {
    * feature exists to replace.
    */
   const handleSetupComplete = async (data: UserSetup) => {
+    // A grower who has not germinated yet starts in prep, not as a seedling.
+    const initialStage = expectedStage(buildSchedule(data, null, null, []));
+
     setSetup(data);
+    setStage(initialStage);
     setHydrated(true);
 
-    const initialClimate = data.location ? await loadClimate(data.location, GrowStage.SEEDLING, true) : null;
+    const initialClimate = data.location ? await loadClimate(data.location, initialStage, true) : null;
 
     let initialStrain: StrainProfile | null = null;
     if (data.strainName.trim()) {
@@ -274,7 +279,7 @@ function App() {
       }
     }
 
-    await generateTasks(data, GrowStage.SEEDLING, true, { climate: initialClimate, strain: initialStrain });
+    await generateTasks(data, initialStage, true, { climate: initialClimate, strain: initialStrain });
   };
 
   const toggleTask = (id: string) => {
@@ -343,7 +348,9 @@ function App() {
               </span>
             )}
           </div>
-          {schedule && <span className="text-xs font-mono text-zinc-500 flex-shrink-0">DAY {schedule.dayOfGrow}</span>}
+          {schedule && (
+            <span className="text-xs font-mono text-zinc-500 flex-shrink-0 uppercase">{growDayLabel(schedule)}</span>
+          )}
         </div>
       </header>
 
@@ -595,7 +602,7 @@ function App() {
                 <p className="text-zinc-600 text-xs mt-2">
                   I know {setup.strainName || 'your setup'}
                   {setup.location ? `, the weather at ${setup.location.label}` : ''}
-                  {schedule ? `, and that you're on day ${schedule.dayOfGrow}` : ''}.
+                  {schedule ? `, and that ${growDayPhrase(schedule)}` : ''}.
                 </p>
               </div>
             )}

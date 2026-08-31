@@ -59,6 +59,8 @@ export const leafVpd = (airTempC: number, relativeHumidity: number, leafOffsetC 
 };
 
 export const VPD_TARGETS: Record<GrowStage, { min: number; max: number; label: string }> = {
+  // Nothing is transpiring yet — the number that matters in prep is medium temperature.
+  [GrowStage.SOIL_PREP]: { min: 0.4, max: 1.2, label: 'n/a — target 18–24°C in the medium' },
   [GrowStage.SEEDLING]: { min: 0.4, max: 0.8, label: '0.4 – 0.8 kPa' },
   [GrowStage.VEGETATIVE]: { min: 0.8, max: 1.2, label: '0.8 – 1.2 kPa' },
   [GrowStage.FLOWERING]: { min: 1.0, max: 1.5, label: '1.0 – 1.5 kPa' },
@@ -67,6 +69,7 @@ export const VPD_TARGETS: Record<GrowStage, { min: number; max: number; label: s
 
 export const vpdVerdict = (vpd: number, stage: GrowStage): string => {
   const target = VPD_TARGETS[stage];
+  if (stage === GrowStage.SOIL_PREP) return 'Not applicable before planting — watch medium temperature instead';
   if (stage === GrowStage.CURING) return 'Not applicable during dry/cure';
   if (vpd < target.min) return `Too low — transpiration stalls, invites mould (target ${target.label})`;
   if (vpd > target.max) return `Too high — stomata close, plants drink hard (target ${target.label})`;

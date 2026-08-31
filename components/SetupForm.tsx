@@ -109,11 +109,12 @@ const SetupForm: React.FC<SetupFormProps> = ({ onComplete }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">Germination date</label>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  Germination date <span className="text-zinc-500 font-normal">— or when you plan to plant</span>
+                </label>
                 <input
                   type="date"
                   value={formData.startDate}
-                  max={toISODate(new Date())}
                   onChange={(e) => e.target.value && handleChange('startDate', e.target.value)}
                   className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all [color-scheme:dark]"
                 />

@@ -6,6 +6,66 @@ const SEEDLING_DAYS = 14;
 const DRY_DAYS = 12;
 const CURE_DAYS = 21;
 
+interface PrepStep {
+  /** Days BEFORE germination this step happens. */
+  daysBefore: number;
+  title: string;
+  description: string;
+}
+
+interface PrepPlan {
+  leadDays: number;
+  steps: PrepStep[];
+}
+
+/**
+ * Pre-plant prep, per medium. Every setup gets one — soil needs weeks to mellow
+ * after amending, coco needs buffering or it strips calcium from the plant, and
+ * a water system needs leak-testing and sterilising before roots are in it.
+ */
+const PREP_PLANS: Record<string, PrepPlan> = {
+  Soil: {
+    leadDays: 14,
+    steps: [
+      { daysBefore: 14, title: 'Mix amendments and moisten', description: 'Blend the base mix with amendments, water to field capacity and cover. Hot amendments need time to mellow before roots meet them.' },
+      { daysBefore: 7, title: 'Turn the mix and re-moisten', description: 'Turn it through, keep it damp but never soggy. The microbial life is doing the work now — aerate it and let it breathe.' },
+      { daysBefore: 2, title: 'Slurry-test pH and EC', description: 'Test before anything is planted. Aim for pH 6.2–6.8 and EC under 1.2 mS/cm so seedlings do not burn on day one.' }
+    ]
+  },
+  Coco: {
+    leadDays: 5,
+    steps: [
+      { daysBefore: 5, title: 'Rinse the coco', description: 'Flush with clean water until runoff EC matches your input. This clears the salts left from processing.' },
+      { daysBefore: 3, title: 'Buffer with CalMag', description: 'Soak for 8–12 hours in a 0.4 EC CalMag solution. Unbuffered coco will steal calcium and magnesium straight from your plants.' },
+      { daysBefore: 1, title: 'Drain, pot up and check runoff', description: 'Drain thoroughly, fill your pots and confirm runoff sits at pH 5.8–6.0. Let the pots come up to room temperature before planting.' }
+    ]
+  },
+  DWC: {
+    leadDays: 5,
+    steps: [
+      { daysBefore: 5, title: 'Assemble and leak-test', description: 'Build the system, fill with plain water and run it 24 hours. Find the leaks now, not with plants sitting in it.' },
+      { daysBefore: 3, title: 'Sterilise and refill', description: 'Drain, sterilise the reservoir, lines and net pots, then refill with fresh water.' },
+      { daysBefore: 1, title: 'Dial in the reservoir', description: 'Set seedling-strength nutrients at 0.4–0.6 EC, pH 5.5–5.8, and hold the water at 18–20°C. Check the air stones are breaking the surface.' }
+    ]
+  },
+  Aeroponics: {
+    leadDays: 5,
+    steps: [
+      { daysBefore: 5, title: 'Assemble and pressure-test', description: 'Build the system and run it for 24 hours. Verify every nozzle atomises — one blocked nozzle kills that site.' },
+      { daysBefore: 3, title: 'Sterilise lines and nozzles', description: 'Flush the lines and soak the nozzles to clear scale. Aeroponics fails on clogs more than on anything else.' },
+      { daysBefore: 1, title: 'Set the misting cycle and reservoir', description: 'Set the timer to your seedling interval, nutrients to 0.4–0.6 EC, pH 5.5–5.8, and water at 18–20°C.' }
+    ]
+  }
+};
+
+const prepPlanFor = (method: string): PrepPlan => PREP_PLANS[method] ?? PREP_PLANS.Soil;
+
+/** Total prep lead time, including the extra site work an outdoor grow needs. */
+export const prepLeadDays = (setup: UserSetup): number => {
+  const outdoor = setup.environment === 'Outdoor' || setup.environment === 'Greenhouse';
+  return prepPlanFor(setup.method).leadDays + (outdoor ? 7 : 0);
+};
+
 const event = (
   id: string,
   date: string,
@@ -56,7 +116,37 @@ export const buildSchedule = (
   const dryDoneDate = toISODate(addDays(fromISODate(harvestDate), DRY_DAYS));
   const jarDate = toISODate(addDays(fromISODate(dryDoneDate), CURE_DAYS));
 
-  const events: GrowEvent[] = [
+  // Prep runs backwards from germination, so these dates sit before day one.
+  const plan = prepPlanFor(setup.method);
+  const events: GrowEvent[] = [];
+
+  if (isOutdoor) {
+    events.push(
+      event(
+        'prep-site',
+        toISODate(addDays(start, -(plan.leadDays + 7))),
+        'Prepare the site',
+        'Clear the ground, check it drains, and dig amendments into the bed a week before you touch the pots. Test the native soil pH before you commit to the spot.',
+        'stage',
+        GrowStage.SOIL_PREP
+      )
+    );
+  }
+
+  plan.steps.forEach((step, index) =>
+    events.push(
+      event(
+        `prep-${index}`,
+        toISODate(addDays(start, -step.daysBefore)),
+        step.title,
+        step.description,
+        'stage',
+        GrowStage.SOIL_PREP
+      )
+    )
+  );
+
+  events.push(
     event('start', startDate, 'Day 1 — Germination', 'Grow clock starts. Log the date on the pot label.', 'stage', GrowStage.SEEDLING),
     event(
       'veg',
@@ -66,7 +156,7 @@ export const buildSchedule = (
       'stage',
       GrowStage.VEGETATIVE
     )
-  ];
+  );
 
   if (isAuto) {
     events.push(
@@ -140,6 +230,7 @@ export const buildSchedule = (
 
   return {
     startDate,
+    prepStartDate: toISODate(addDays(start, -prepLeadDays(setup))),
     vegDays,
     floweringDays,
     dryDays: DRY_DAYS,
@@ -152,9 +243,28 @@ export const buildSchedule = (
   };
 };
 
+/**
+ * How to say where the grow is. Before germination the clock has not started,
+ * so counting days would be misleading.
+ */
+export const growDayLabel = (schedule: GrowSchedule): string => {
+  if (schedule.dayOfGrow >= 1) return `Day ${schedule.dayOfGrow}`;
+  const away = 1 - schedule.dayOfGrow;
+  return away === 1 ? 'Germinates tomorrow' : `Germinates in ${away} days`;
+};
+
+/** The same fact as a sentence fragment, for prose that reads naturally. */
+export const growDayPhrase = (schedule: GrowSchedule): string => {
+  if (schedule.dayOfGrow >= 1) return `you're on day ${schedule.dayOfGrow}`;
+  const away = 1 - schedule.dayOfGrow;
+  return away === 1 ? 'you plant tomorrow' : `you plant in ${away} days`;
+};
+
 /** Which stage the calendar says they should be in today. */
 export const expectedStage = (schedule: GrowSchedule): GrowStage => {
   const today = toISODate(new Date());
+  // Germination can be set in the future — until it arrives, the work is prep.
+  if (today < schedule.startDate) return GrowStage.SOIL_PREP;
   if (today >= schedule.harvestDate) return GrowStage.CURING;
   if (today >= schedule.flipDate) return GrowStage.FLOWERING;
   if (daysBetween(schedule.startDate, today) >= SEEDLING_DAYS) return GrowStage.VEGETATIVE;
@@ -174,16 +284,34 @@ const escapeICS = (value: string): string =>
 
 const compactDate = (iso: string): string => iso.replace(/-/g, '');
 
-/** Fold lines at 75 octets as RFC 5545 requires, or Outlook silently truncates. */
+const encoder = new TextEncoder();
+
+/**
+ * Fold lines at 75 OCTETS as RFC 5545 requires, or Outlook silently truncates.
+ * Counting characters is not enough — degree signs, dashes and accents are
+ * multi-byte, and a multi-octet character must never be split across a fold.
+ */
 const fold = (line: string): string => {
-  if (line.length <= 75) return line;
-  const parts = [line.slice(0, 75)];
-  let rest = line.slice(75);
-  while (rest.length > 74) {
-    parts.push(' ' + rest.slice(0, 74));
-    rest = rest.slice(74);
+  if (encoder.encode(line).length <= 75) return line;
+
+  const parts: string[] = [];
+  let current = '';
+  let bytes = 0;
+
+  // Iterating the string yields whole code points, so surrogate pairs stay intact.
+  for (const char of line) {
+    const size = encoder.encode(char).length;
+    if (bytes + size > 75) {
+      parts.push(current);
+      // Continuation lines begin with a space, which counts toward the limit.
+      current = ' ';
+      bytes = 1;
+    }
+    current += char;
+    bytes += size;
   }
-  if (rest) parts.push(' ' + rest);
+  if (current) parts.push(current);
+
   return parts.join('\r\n');
 };
 
@@ -210,9 +338,9 @@ export const buildICS = (schedule: GrowSchedule, setup: UserSetup): string => {
       `DTSTAMP:${stamp}`,
       `DTSTART;VALUE=DATE:${compactDate(item.date)}`,
       `DTEND;VALUE=DATE:${compactDate(toISODate(addDays(fromISODate(item.date), 1)))}`,
-      fold(`SUMMARY:${escapeICS(`${strain}: ${item.title}`)}`),
-      fold(`DESCRIPTION:${escapeICS(item.description)}`),
-      ...(location ? [fold(location)] : []),
+      `SUMMARY:${escapeICS(`${strain}: ${item.title}`)}`,
+      `DESCRIPTION:${escapeICS(item.description)}`,
+      ...(location ? [location] : []),
       `CATEGORIES:${item.kind.toUpperCase()}`,
       item.kind === 'risk' ? 'PRIORITY:1' : 'PRIORITY:5',
       'END:VEVENT'
@@ -220,7 +348,7 @@ export const buildICS = (schedule: GrowSchedule, setup: UserSetup): string => {
   });
 
   lines.push('END:VCALENDAR');
-  return lines.join('\r\n');
+  return lines.map(fold).join('\r\n');
 };
 
 export const downloadICS = (schedule: GrowSchedule, setup: UserSetup): void => {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { GrowEvent, GrowSchedule, UserSetup } from '../types';
 import { daysBetween, fromISODate, toISODate } from '../services/solar';
-import { downloadICS, googleCalendarUrl } from '../services/calendar';
+import { downloadICS, googleCalendarUrl, growDayLabel, prepLeadDays } from '../services/calendar';
 import { AlertTriangleIcon, CalendarIcon, CheckCircleIcon, DownloadIcon, LeafIcon } from './Icons';
 
 interface GrowCalendarProps {
@@ -67,7 +67,11 @@ const GrowCalendar: React.FC<GrowCalendarProps> = ({ schedule, setup, onStartDat
       </p>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Metric label="Day of grow" value={`${schedule.dayOfGrow}`} sub={`since ${schedule.startDate}`} />
+        <Metric
+          label={schedule.dayOfGrow >= 1 ? 'Day of grow' : 'Prep underway'}
+          value={schedule.dayOfGrow >= 1 ? `${schedule.dayOfGrow}` : growDayLabel(schedule).replace('Germinates ', '')}
+          sub={schedule.dayOfGrow >= 1 ? `since ${schedule.startDate}` : `prep from ${schedule.prepStartDate}`}
+        />
         <Metric label={isAuto ? 'Pre-flower' : 'Flip to flower'} value={schedule.flipDate.slice(5)} sub={isOutdoor && !isAuto ? 'set by daylight' : `${schedule.vegDays} days veg`} />
         <Metric label="Harvest" value={schedule.harvestDate.slice(5)} sub={daysToHarvest >= 0 ? `in ${daysToHarvest} days` : `${Math.abs(daysToHarvest)} days ago`} />
         <Metric label="Jars ready" value={schedule.jarDate.slice(5)} sub={`${schedule.floweringDays}-day flower`} />
@@ -75,11 +79,12 @@ const GrowCalendar: React.FC<GrowCalendarProps> = ({ schedule, setup, onStartDat
 
       <div className="glass-panel rounded-xl border border-zinc-800 p-5 grid grid-cols-1 sm:grid-cols-2 gap-5">
         <div>
-          <label className="block text-xs font-medium text-zinc-400 mb-2">Germination date</label>
+          <label className="block text-xs font-medium text-zinc-400 mb-2">
+            Germination date <span className="text-zinc-500 font-normal">— set a future date to plan a grow</span>
+          </label>
           <input
             type="date"
             value={schedule.startDate}
-            max={today}
             onChange={(e) => e.target.value && onStartDateChange(e.target.value)}
             className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:ring-2 focus:ring-emerald-500 outline-none [color-scheme:dark]"
           />
@@ -107,6 +112,11 @@ const GrowCalendar: React.FC<GrowCalendarProps> = ({ schedule, setup, onStartDat
           </p>
         )}
       </div>
+
+      <p className="text-xs text-zinc-500 leading-relaxed">
+        Prep runs backwards from your germination date — {setup.method} needs about {prepLeadDays(setup)} days
+        {isOutdoor ? ', including the site work an outdoor bed wants' : ''}. Move the date and the whole plan moves with it.
+      </p>
 
       <div className="space-y-3">
         <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider">Timeline</h2>

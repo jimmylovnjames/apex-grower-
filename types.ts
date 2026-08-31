@@ -1,4 +1,6 @@
 export enum GrowStage {
+  // Declaration order drives the stage selector, so prep comes first.
+  SOIL_PREP = 'Soil Prep',
   SEEDLING = 'Seedling',
   VEGETATIVE = 'Vegetative',
   FLOWERING = 'Flowering',
@@ -155,6 +157,8 @@ export interface GrowEvent {
 export interface GrowSchedule {
   /** Germination / day one, ISO yyyy-mm-dd */
   startDate: string;
+  /** When medium and system prep should begin — before day one. */
+  prepStartDate: string;
   vegDays: number;
   floweringDays: number;
   dryDays: number;
