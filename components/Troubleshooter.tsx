@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { UserSetup, GrowStage, DiagnosisResult } from '../types';
+import { UserSetup, GrowStage, DiagnosisResult, LocalClimate, StrainProfile, GrowSchedule } from '../types';
 import { diagnosePlantIssue } from '../services/gemini';
-import { BugIcon, LeafIcon, ActivityIcon, AlertTriangleIcon, LoaderIcon, CheckCircleIcon, XIcon } from './Icons';
+import { BugIcon, LeafIcon, ActivityIcon, AlertTriangleIcon, LoaderIcon, CheckCircleIcon, XIcon, MapPinIcon } from './Icons';
 
 interface TroubleshooterProps {
   setup: UserSetup;
   stage: GrowStage;
+  climate: LocalClimate | null;
+  strain: StrainProfile | null;
+  schedule: GrowSchedule | null;
   onClose: () => void;
 }
 
@@ -16,7 +19,7 @@ const CATEGORIES = [
   { id: 'environment', label: 'Roots / Environment', icon: AlertTriangleIcon, symptoms: ['Bad Smell (Rot)', 'Roots are Brown/Slimy', 'Soil not drying', 'Mold on topsoil', 'Temperature Issues'] }
 ];
 
-const Troubleshooter: React.FC<TroubleshooterProps> = ({ setup, stage, onClose }) => {
+const Troubleshooter: React.FC<TroubleshooterProps> = ({ setup, stage, climate, strain, schedule, onClose }) => {
   const [step, setStep] = useState<'category' | 'symptom' | 'analyzing' | 'result'>('category');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSymptom, setSelectedSymptom] = useState<string | null>(null);
@@ -31,7 +34,7 @@ const Troubleshooter: React.FC<TroubleshooterProps> = ({ setup, stage, onClose }
     setSelectedSymptom(symptom);
     setStep('analyzing');
     
-    const result = await diagnosePlantIssue(setup, stage, selectedCategory!, symptom);
+    const result = await diagnosePlantIssue(setup, stage, selectedCategory!, symptom, climate, strain, schedule);
     setDiagnosis(result);
     setStep('result');
   };
@@ -91,7 +94,10 @@ const Troubleshooter: React.FC<TroubleshooterProps> = ({ setup, stage, onClose }
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <LoaderIcon className="w-16 h-16 text-emerald-500 animate-spin mb-6" />
             <h3 className="text-xl font-bold text-white mb-2">Running Diagnostics</h3>
-            <p className="text-zinc-400 max-w-xs">Analyzing your {setup.method} setup and symptoms against common pathologies...</p>
+            <p className="text-zinc-400 max-w-xs">
+              Cross-checking your {setup.method} setup{setup.location ? `, the weather at ${setup.location.label}` : ''}
+              {setup.strainName ? ` and ${setup.strainName}'s known weak points` : ''} against common pathologies...
+            </p>
           </div>
         );
 
@@ -119,6 +125,16 @@ const Troubleshooter: React.FC<TroubleshooterProps> = ({ setup, stage, onClose }
               <h4 className="text-zinc-300 font-medium mb-2">Analysis</h4>
               <p className="text-zinc-400 text-sm leading-relaxed">{diagnosis.analysis}</p>
             </div>
+
+            {diagnosis.localFactor && (
+              <div className="bg-sky-950/30 rounded-xl p-5 border border-sky-900/50">
+                <h4 className="text-sky-300 font-medium mb-2 flex items-center gap-2">
+                  <MapPinIcon className="w-4 h-4" />
+                  Local factor
+                </h4>
+                <p className="text-zinc-300 text-sm leading-relaxed">{diagnosis.localFactor}</p>
+              </div>
+            )}
 
             <div>
               <h4 className="text-white font-medium mb-3 flex items-center gap-2">

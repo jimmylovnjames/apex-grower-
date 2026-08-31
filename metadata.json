@@ -1,6 +1,8 @@
 {
   "name": "ApexGrow",
-  "description": "An AI-powered cannabis cultivation aide that generates tailored, interactive goals to elevate your growing skills from seedling to harvest.",
-  "requestFramePermissions": [],
+  "description": "An AI-powered cannabis cultivation aide that combines your location's live weather and daylight, a grow calendar you can export to your own calendar app, and a strain expert — so every goal, diagnosis and answer is specific to your site, your cultivar and where you are in the grow.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
   "majorCapabilities": []
 }
