@@ -32,7 +32,7 @@ const CATEGORIES = [
 ];
 
 const Troubleshooter: React.FC<TroubleshooterProps> = ({ setup, stage, climate, strain, schedule, onClose }) => {
-  const categories = stage === GrowStage.SOIL_PREP ? PREP_CATEGORIES : CATEGORIES;
+  const categories = stage === GrowStage.MEDIUM_PREP ? PREP_CATEGORIES : CATEGORIES;
   const [step, setStep] = useState<'category' | 'symptom' | 'analyzing' | 'result'>('category');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSymptom, setSelectedSymptom] = useState<string | null>(null);
@@ -65,7 +65,7 @@ const Troubleshooter: React.FC<TroubleshooterProps> = ({ setup, stage, climate, 
         return (
           <div className="space-y-4">
             <h3 className="text-xl font-bold text-white mb-6">
-              {stage === GrowStage.SOIL_PREP ? 'What is wrong with your setup?' : 'What kind of issue are you seeing?'}
+              {stage === GrowStage.MEDIUM_PREP ? 'What is wrong with your setup?' : 'What kind of issue are you seeing?'}
             </h3>
             <div className="grid grid-cols-2 gap-4">
               {categories.map((cat) => (

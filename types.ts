@@ -1,6 +1,6 @@
 export enum GrowStage {
   // Declaration order drives the stage selector, so prep comes first.
-  SOIL_PREP = 'Soil Prep',
+  MEDIUM_PREP = 'Medium Prep',
   SEEDLING = 'Seedling',
   VEGETATIVE = 'Vegetative',
   FLOWERING = 'Flowering',

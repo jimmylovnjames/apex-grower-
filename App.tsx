@@ -30,7 +30,7 @@ const STORAGE = {
  * today, and defaulting them to day one makes every projected date wrong.
  */
 const STAGE_BACKDATE_DAYS: Record<GrowStage, number> = {
-  [GrowStage.SOIL_PREP]: 0,
+  [GrowStage.MEDIUM_PREP]: 0,
   [GrowStage.SEEDLING]: 0,
   [GrowStage.VEGETATIVE]: 14,
   [GrowStage.FLOWERING]: 42,
@@ -61,11 +61,18 @@ const normalizeTask = (raw: any, fallbackStage: GrowStage): Task => ({
   description: raw?.description ?? '',
   completed: Boolean(raw?.completed),
   category: raw?.category ?? 'Observation',
-  stage: raw?.stage ?? fallbackStage,
+  stage: raw?.stage === 'Soil Prep' ? GrowStage.MEDIUM_PREP : raw?.stage ?? fallbackStage,
   dueDate: raw?.dueDate,
   localRationale: raw?.localRationale,
   createdAt: raw?.createdAt ?? Date.now()
 });
+
+/** The prep stage was briefly stored as 'Soil Prep' — map old saves forward. */
+const normalizeStage = (raw: string | null): GrowStage => {
+  if (raw === 'Soil Prep') return GrowStage.MEDIUM_PREP;
+  const known = Object.values(GrowStage);
+  return known.includes(raw as GrowStage) ? (raw as GrowStage) : GrowStage.SEEDLING;
+};
 
 const readJSON = <T,>(key: string): T | null => {
   try {
@@ -109,7 +116,7 @@ function App() {
 
   // Load from local storage on mount
   useEffect(() => {
-    const savedStage = (localStorage.getItem(STORAGE.stage) as GrowStage) || GrowStage.SEEDLING;
+    const savedStage = normalizeStage(localStorage.getItem(STORAGE.stage));
     const savedSetup = readJSON<any>(STORAGE.setup);
     if (savedSetup) setSetup(normalizeSetup(savedSetup, savedStage));
 

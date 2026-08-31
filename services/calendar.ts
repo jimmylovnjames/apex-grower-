@@ -128,7 +128,7 @@ export const buildSchedule = (
         'Prepare the site',
         'Clear the ground, check it drains, and dig amendments into the bed a week before you touch the pots. Test the native soil pH before you commit to the spot.',
         'stage',
-        GrowStage.SOIL_PREP
+        GrowStage.MEDIUM_PREP
       )
     );
   }
@@ -141,7 +141,7 @@ export const buildSchedule = (
         step.title,
         step.description,
         'stage',
-        GrowStage.SOIL_PREP
+        GrowStage.MEDIUM_PREP
       )
     )
   );
@@ -264,7 +264,7 @@ export const growDayPhrase = (schedule: GrowSchedule): string => {
 export const expectedStage = (schedule: GrowSchedule): GrowStage => {
   const today = toISODate(new Date());
   // Germination can be set in the future — until it arrives, the work is prep.
-  if (today < schedule.startDate) return GrowStage.SOIL_PREP;
+  if (today < schedule.startDate) return GrowStage.MEDIUM_PREP;
   if (today >= schedule.harvestDate) return GrowStage.CURING;
   if (today >= schedule.flipDate) return GrowStage.FLOWERING;
   if (daysBetween(schedule.startDate, today) >= SEEDLING_DAYS) return GrowStage.VEGETATIVE;

@@ -35,7 +35,7 @@ export interface GrowContext {
  * model will happily give plant-care advice for a stage with no plants in it.
  */
 const STAGE_BRIEFS: Record<GrowStage, string> = {
-  [GrowStage.SOIL_PREP]:
+  [GrowStage.MEDIUM_PREP]:
     'Nothing is planted yet. Every recommendation must be about getting the medium, containers, water and space ready: amending and buffering, pH and EC of the medium or reservoir before anything goes in, container size and drainage, sterilising equipment, and bringing root-zone temperature to 18–24°C. Do not give plant-care, feeding-schedule or training advice — there is no plant.',
   [GrowStage.SEEDLING]:
     'Fragile roots, tiny water demand. Focus on humidity, gentle light, and not overwatering.',
@@ -182,7 +182,7 @@ Generate 5 specific, high-impact tasks for the ${stage} stage of THIS grow.
 
 Requirements:
 - At least two tasks must be driven by the local forecast or daylight above (heat, cold, humidity, rain, UV, photoperiod).
-${stage === GrowStage.SOIL_PREP
+${stage === GrowStage.MEDIUM_PREP
   ? `- At least one task must size the setup to ${setup.strainName || 'this cultivar'} — container volume for its root mass and final height, and how rich to build the medium for its feeding appetite.
 - Every task must be pre-plant work on the ${setup.method} medium, the containers, the water or the space. Nothing about caring for a plant.`
   : `- At least one task must be specific to ${setup.strainName || 'this cultivar'} — its stretch, flowering length, feeding appetite or known weaknesses.`}
